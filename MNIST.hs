@@ -14,20 +14,19 @@ data ImageSet = ImageSet {
 	images         :: [V.Vector Word8]
 	} deriving Show
 
-bs2vec = V.fromList . B.unpack
-
 loadFileGet :: Get ImageSet
 loadFileGet = do
-	magic <- getWord32be
+	magic  <- getWord32be
 	nb_ent <- getWord32be
-	w <- getWord32be
-	h <- getWord32be
-	imgs <- sequence . take (fromIntegral nb_ent) . repeat $ getByteString (fromIntegral $ w*h)
+	w      <- getWord32be
+	h      <- getWord32be
+	imgs   <- readList $ getByteString (fromIntegral $ w*h)
 	return $ ImageSet magic nb_ent w h (fmap bs2vec imgs)
+	where
+		bs2vec = V.fromList . B.unpack
+		readList = sequence . take (fromIntegral nb_ent) . repeat
 
 loadFile :: String -> IO ImageSet
 loadFile fileName = do
 	bytes <- LB.readFile fileName
 	return $ runGet loadFileGet bytes
-
-Ok, on a nos images, c'est fini pour today :)
