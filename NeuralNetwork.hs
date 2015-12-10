@@ -26,11 +26,22 @@ type Input a = SparseVector a
 type Output a = SparseVector a
 
 -- Assert that layers is a non empty list
-eval :: (Num a, Eq a) => Input a -> Network a -> Output a
-eval input net = foldl step input matrixList
+forward :: (Num a, Eq a) => Input a -> Network a
+        -> ([SparseVector a], [SparseVector a])
+forward input net = foldl acc ([input], []) matrixList
   where
     matrixList = map (weights) . layers $ net
-    step vec mat = (vectorialise $ sigma net) $ mulMV mat vec
+    acc ((x:xs), ys) mat = (aVec : x : xs, zVec : ys)
+      where
+        (aVec, zVec) = step x mat
+    step vec mat = (aVec, zVec)
+      where
+        zVec = mulMV mat vec
+        aVec = vectorialise (sigma net) zVec
+
+eval :: (Num a, Eq a) => Input a -> Network a -> Output a
+eval input net = head . fst $ forward input net
+
 
 learn :: [Input a] -> Network a -> Network a
 learn = undefined
@@ -41,7 +52,7 @@ learn = undefined
 sigmoid :: Floating a => a -> a
 sigmoid x = 1 / (1 + (exp $ -x))
 
-layer_a = Layer 3 (fromAssocList [((1, 1), 1), ((2, 2), 1)])
+layer_a = Layer 3 (fromAssocList [((1, 1), 1), ((1, 2), 1), ((2, 2), 1)])
 layer_b = Layer 1 (fromAssocList [((1, 1), 1), ((1, 2), 1), ((1, 3), 1)])
 net = Network [layer_a, layer_b] sigmoid undefined
 input = sparseList [1, 2.0]
