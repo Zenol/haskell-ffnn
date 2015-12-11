@@ -5,15 +5,14 @@ import Math.LinearAlgebra.Sparse.Vector
 
 
 data Layer a = Layer
-  { nb_neuron :: Int
-  , weights   :: SparseMatrix a
+  { weights   :: SparseMatrix a
   , biases    :: SparseVector a
   } deriving Show
 
 data Network a = Network
   { layers :: [Layer a]
   , sigma  :: a -> a
-  , sigma' :: a -> a
+  , opT    :: a -> a
   }
 
 vectorialise :: (Num a, Num b, Eq a, Eq b) =>
@@ -48,28 +47,61 @@ forward input net = foldl acc ([input], []) coefsList
 eval :: (Num a, Eq a) => Input a -> Network a -> Output a
 eval input net = head . fst $ forward input net
 
-
--- learn :: (Input a, Output) -> Network a -> Network a
-learn x y net = (deltaList, aList)
+learn :: (Num a, Eq a) =>
+         a -> Input a -> Output a -> Network a -> Network a
+learn h x y net = net {layers = map correctLayer (zip3 omegaList betaList (layers net))}
   where
-    (aList@(aL : as), zs) = forward x net
+    correctLayer (omega, beta, layer) = layer
+      { weights = fmap (opT net) $ (weights layer) - fmap (*h) omega
+      , biases  = fmap (opT net) $ (biases layer)  - fmap (*h) beta
+      }
+    -- -> order
+    betaList  = tail . reverse $ deltaList
+    -- -> order
+    omegaList = reverse $ map buildOmega $ zip deltaList as
+    buildOmega (aVec, deltaVec) = fromAssocListWithSize (dim aVec, dim deltaVec) matList
+      where
+        -- <- order
+        matList = [((k, j), a * delta) |
+                   (k, a) <- vecToAssocList aVec,
+                   (j,delta) <- vecToAssocList deltaVec]
+    (aL : as, zs) = forward x net
     deltaList = scanl (flip $ uncurry computeDelta) deltaL wAndA
     computeDelta matL al deltaL = (trans matL `mulMV` deltaL)
                                   `hMult` (vectorialise sigma' aL)
+    -- <- order
     deltaL = nabla_aC `hMult` (vectorialise sigma' aL)
     nabla_aC = aL - y
     -- sigmoid derivative aplied to a_j^L
     sigma' a = a * (1 - a)
-    wAndA = zip transMatrices as
-    transMatrices = fmap (trans . weights) . reverse . layers $ net
+    wAndA = ws `zip` as
+    ws = fmap weights . reverse . layers $ net
 
+emptyLayer :: (Num a, Eq a) => Int -> Int -> Layer a
+emptyLayer nbNeurons inputSize = Layer
+  { weights = zeroMx (nbNeurons, inputSize)
+  , biases = zeroVec nbNeurons
+  }
+
+-- DIGIT NeuralNetwork
+layerHidden = emptyLayer 15 784
+layerOutput = emptyLayer 10 15
+networkDigits = Network [layerHidden, layerOutput] sigmoid id
 
 -- Teste
 
 sigmoid :: Floating a => a -> a
 sigmoid x = 1 / (1 + (exp $ -x))
 
-layer_a = Layer 3 (fromAssocList [((1, 1), 1), ((1, 2), 1), ((2, 2), 1)]) (sparseList [])
-layer_b = Layer 1 (fromAssocList [((1, 1), 1), ((1, 2), 1), ((1, 3), 1)]) (sparseList [])
-net = Network [layer_a, layer_b] sigmoid undefined
-input = sparseList [1, 2.0]
+layer_a = emptyLayer 4 2
+layer_b = emptyLayer 6 4
+net = Network [layer_a, layer_b] sigmoid (\x -> if abs x > 0.2 then x - 0.02 * signum x else 0)
+input = sparseList [32.0, 4.0]
+output = sparseList [0.8, 0.7, 0.2, 0.8, 0.4, 0.2]
+
+
+--     *
+-- *   *   *
+-- *   *   *
+-- I   La  Lb
+

@@ -14,8 +14,8 @@ data ImageSet = ImageSet {
 	images         :: [V.Vector Word8]
 	} deriving Show
 
-loadFileGet :: Get ImageSet
-loadFileGet = do
+loadImagesGet :: Get ImageSet
+loadImagesGet = do
 	magic  <- getWord32be
 	nb_ent <- getWord32be
 	w      <- getWord32be
@@ -26,7 +26,7 @@ loadFileGet = do
 		bs2vec = V.fromList . B.unpack
 		readList = sequence . take (fromIntegral nb_ent) . repeat
 
-loadFile :: String -> IO ImageSet
-loadFile fileName = do
+loadImageFile :: String -> IO ImageSet
+loadImageFile fileName = do
 	bytes <- LB.readFile fileName
-	return $ runGet loadFileGet bytes
+	return $ runGet loadImagesGet bytes
