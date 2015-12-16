@@ -1,7 +1,8 @@
 module NeuralNetwork where
 
-import Math.LinearAlgebra.Sparse.Matrix
-import Math.LinearAlgebra.Sparse.Vector
+import           Math.LinearAlgebra.Sparse.Matrix
+import           Math.LinearAlgebra.Sparse.Vector
+import qualified Data.Vector as V
 
 
 data Layer a = Layer
@@ -78,26 +79,39 @@ learn h x y net = net {layers = map correctLayer (zip3 omegaList betaList (layer
     ws = fmap weights . reverse . layers $ net
 
 emptyLayer :: (Num a, Eq a) => Int -> Int -> Layer a
-emptyLayer nbNeurons inputSize = Layer
+emptyLayer inputSize nbNeurons = Layer
   { weights = zeroMx (nbNeurons, inputSize)
   , biases = zeroVec nbNeurons
   }
 
--- DIGIT NeuralNetwork
-layerHidden = emptyLayer 15 784
-layerOutput = emptyLayer 10 15
-networkDigits = Network [layerHidden, layerOutput] sigmoid id
-
--- Teste
+randomLayer :: (Num a, Eq a) => [a] -> Int -> Int -> Layer a
+randomLayer rList inputSize nbNeurons = Layer
+  { weights = sparseMx mat
+  , biases = sparseList lb
+  }
+  where
+    (lb, rList') = splitAt nbNeurons rList
+    splitMat l = row : (splitMat l')
+      where
+      (row, l') = splitAt inputSize rList
+    mat = take nbNeurons $ splitMat rList
 
 sigmoid :: Floating a => a -> a
 sigmoid x = 1 / (1 + (exp $ -x))
 
-layer_a = emptyLayer 4 2
-layer_b = emptyLayer 6 4
-net = Network [layer_a, layer_b] sigmoid (\x -> if abs x > 0.2 then x - 0.02 * signum x else 0)
-input = sparseList [32.0, 4.0]
-output = sparseList [0.8, 0.7, 0.2, 0.8, 0.4, 0.2]
+-- DIGIT NeuralNetwork
+layerHidden rList = randomLayer rList 784 15 
+layerOutput rList = randomLayer rList 15 10
+networkDigits rList = Network [layerHidden rList, layerOutput rList] sigmoid id
+
+-- Teste
+
+
+-- layer_a = emptyLayer 4 2
+-- layer_b = emptyLayer 6 4
+-- net = Network [layer_a, layer_b] sigmoid (\x -> if abs x > 0.2 then x - 0.02 * signum x else 0)
+-- input = sparseList [32.0, 4.0]
+-- output = sparseList [0.8, 0.7, 0.2, 0.8, 0.4, 0.2]
 
 
 --     *
