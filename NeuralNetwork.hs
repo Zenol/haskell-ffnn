@@ -21,7 +21,7 @@ vectorialise :: (Num a, Num b, Eq a, Eq b) =>
 vectorialise f = sparseList . fmap f . fillVec
 
 -- Hadamard product
-hMult :: (Num a, Num b, Eq a, Eq b) =>
+hMult :: (Num a, Eq a) =>
                    SparseVector a -> SparseVector a -> SparseVector a
 hMult = intersectVecsWith (*)
 
