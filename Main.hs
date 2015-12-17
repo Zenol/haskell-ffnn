@@ -19,7 +19,7 @@ inlineLearning :: (Input Double -> Output Double -> Network Double -> Network Do
    -> Network Double
    -> [(Input Double, Output Double)]
    -> Network Double
-inlineLearning learnFct net dt = foldl (flip . uncurry $ learnFct) net dt
+inlineLearning learnFct net dt = L.foldl' (flip . uncurry $ learnFct) net dt
 
 simp x = floor $ x * 10000
 
@@ -27,12 +27,7 @@ argmaxs xs = L.findIndices  (==maximum xs) xs
 -- Assert non empty list
 argmax xs = let Just v = L.findIndex  (==maximum xs) xs in fromIntegral v
 
-zipEquals [] _ = []
-zipEquals _ [] = []
-zipEquals (a : as) (b : bs) = if a == b then
-                                (a, b) : zipEquals as bs
-                              else
-                                zipEquals as bs
+countEquals x y = fromIntegral . length . filter (==True) $ zipWith (==) x y
 
 main = do
   seed <- newStdGen
@@ -42,11 +37,9 @@ main = do
   --step <- (fmap read getLine) :: IO Double
   let step = 3
   mnist <- loadMNIST "train-images.idx3-ubyte" "train-labels.idx1-ubyte"
-  let net = inlineLearning (learn step) (networkDigits rdList) (dtSet mnist)
-  let net'' = inlineLearning (learn 1) net (dtSet mnist)
---  let net'' = inlineLearning (learn 0.5) net' (dtSet mnist)
+  let net = inlineLearning (learn step) (networkDigits rdList) (take 5000 $ dtSet mnist)
   -- All the images
-  let x = map (sparseList . map fromIntegral . V.toList . fst) (take 10000 mnist)
+  let x = map (sparseList . map fromIntegral . V.toList . fst) (take 3000 mnist)
   let y = map (snd) (take 10000 mnist)
   let x' = map fillVec $ map (flip eval $ net) x
   let x'' = map argmax $ x'
@@ -57,5 +50,5 @@ main = do
   putStrLn (show $ take 10 x')
   putStrLn (show $ take 10 x'')
   putStrLn "Efficiency : "
-  putStrLn (show $ (fromIntegral . length $ zipEquals x'' y) / (fromIntegral . length$ x) * 100)
+  putStrLn (show $ (countEquals x'' y) / (fromIntegral . length $ x) * 100)
   return net
