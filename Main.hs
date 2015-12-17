@@ -33,13 +33,13 @@ main = do
   seed <- newStdGen
   let rdList = randomRs (0.0, 1.0) seed
   dt <- loadMNIST "train-labels.idx1-ubyte" "train-images.idx3-ubyte"
-  putStrLn "Step size (in Double) ?"
+  --putStrLn "Step size (in Double) ?"
   --step <- (fmap read getLine) :: IO Double
   let step = 3
   mnist <- loadMNIST "train-images.idx3-ubyte" "train-labels.idx1-ubyte"
-  let net = inlineLearning (learn step) (networkDigits rdList) (take 5000 $ dtSet mnist)
+  let net = inlineLearning (learn step) (networkDigits rdList) (take 3000 $ dtSet mnist)
   -- All the images
-  let x = map (sparseList . map fromIntegral . V.toList . fst) (take 3000 mnist)
+  let x = map (sparseList . map fromIntegral . V.toList . fst) (take 1000 mnist)
   let y = map (snd) (take 10000 mnist)
   let x' = map fillVec $ map (flip eval $ net) x
   let x'' = map argmax $ x'

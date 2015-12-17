@@ -3,6 +3,7 @@ module NeuralNetwork where
 import           Math.LinearAlgebra.Sparse.Matrix
 import           Math.LinearAlgebra.Sparse.Vector
 import qualified Data.Vector as V
+import           Data.List (foldl')
 
 
 data Layer a = Layer
@@ -33,7 +34,7 @@ type Output a = SparseVector a
 -- Assert that layers is a non empty list
 forward :: (Num a, Eq a) => Input a -> Network a
         -> ([SparseVector a], [SparseVector a])
-forward input net = foldl acc ([input], []) coefsList
+forward input net = foldl' acc ([input], []) coefsList
   where
     coefsList = map getCoefs . layers $ net
     acc ((x:xs), ys) mat = (aVec : x : xs, zVec : ys)
@@ -50,7 +51,7 @@ eval input net = head . fst $ forward input net
 
 learn :: (Num a, Eq a) =>
          a -> Input a -> Output a -> Network a -> Network a
-learn h x y net = net {layers = map correctLayer (zip3 omegaList betaList (layers net))}
+learn h x y net = net `seq` net {layers = map correctLayer (zip3 omegaList betaList (layers net))}
   where
     correctLayer (omega, beta, layer) = layer
       { weights = fmap (opT net) $ (weights layer) - fmap (*h) omega
