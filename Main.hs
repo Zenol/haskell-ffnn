@@ -37,7 +37,7 @@ main = do
   --step <- (fmap read getLine) :: IO Double
   let step = 3
   mnist <- loadMNIST "train-images.idx3-ubyte" "train-labels.idx1-ubyte"
-  let net = inlineLearning (learn step) (networkDigits rdList) (take 3000 $ dtSet mnist)
+  let net = inlineLearning (learn step) (networkDigits rdList) (take 1000 $ dtSet mnist)
   -- All the images
   let x = map (sparseList . map fromIntegral . V.toList . fst) (take 1000 mnist)
   let y = map (snd) (take 10000 mnist)

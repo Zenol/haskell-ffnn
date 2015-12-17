@@ -61,23 +61,29 @@ learn h x y net = net `seq` net {layers = map correctLayer (zip3 omegaList betaL
     betaList  = tail . reverse $ deltaList
     -- -> order
     omegaList = reverse $ map buildOmega $ zip deltaList as
-    buildOmega (aVec, deltaVec) = fromAssocListWithSize (dim aVec, dim deltaVec) matList
-      where
-        -- <- order
-        matList = [((k, j), a * delta) |
-                   (k, a) <- vecToAssocList aVec,
-                   (j,delta) <- vecToAssocList deltaVec]
     (aL : as, zs) = forward x net
     deltaList = scanl (flip $ uncurry computeDelta) deltaL wAndA
-    computeDelta matL al deltaL = (trans matL `mulMV` deltaL)
-                                  `hMult` (vectorialise sigma' aL)
     -- <- order
     deltaL = nabla_aC `hMult` (vectorialise sigma' aL)
     nabla_aC = aL - y
-    -- sigmoid derivative aplied to a_j^L
-    sigma' a = a * (1 - a)
     wAndA = ws `zip` as
     ws = fmap weights . reverse . layers $ net
+
+-- sigmoid derivative aplied to a_j^L
+sigma' :: Num a => a -> a
+sigma' a = a * (1 - a)
+
+computeDelta :: (Eq a, Num a) => SparseMatrix a -> SparseVector a -> SparseVector a -> SparseVector a
+computeDelta matL al deltaL = (trans matL `mulMV` deltaL)
+                              `hMult` (vectorialise sigma' al)
+
+buildOmega :: (Eq a, Num a) => (SparseVector a, SparseVector a) -> SparseMatrix a
+buildOmega (aVec, deltaVec) = fromAssocListWithSize (dim aVec, dim deltaVec) matList
+  where
+    -- <- order
+    matList = [((k, j), a * delta) |
+               (k, a) <- vecToAssocList aVec,
+               (j,delta) <- vecToAssocList deltaVec]
 
 emptyLayer :: (Num a, Eq a) => Int -> Int -> Layer a
 emptyLayer inputSize nbNeurons = Layer
